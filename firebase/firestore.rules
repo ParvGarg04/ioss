@@ -1,0 +1,83 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isMember() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'member';
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.role == 'member'
+        && request.resource.data.uid == userId;
+      allow update: if isAdmin()
+        || (isOwner(userId)
+          && request.resource.data.role == resource.data.role
+          && (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['points'])
+            || request.resource.data.points <= resource.data.get('points', 0)
+          ));
+      allow delete: if isOwner(userId);
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (
+        isOwner(resource.data.userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isActive'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /taskSubmissions/{submissionId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isMember()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.verificationStatus == 'pending_review';
+      allow update: if isAdmin()
+        || (isOwner(resource.data.userId)
+          && request.resource.data.verificationStatus == resource.data.verificationStatus);
+      allow delete: if isAdmin();
+    }
+
+    match /waterLogs/{logId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isMember()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || isOwner(resource.data.userId);
+    }
+
+    match /emergencyAlerts/{alertId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /rewardRedemptions/{redemptionId} {
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow create: if isMember()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+  }
+}

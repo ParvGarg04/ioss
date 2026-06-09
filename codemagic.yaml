@@ -1,0 +1,48 @@
+workflows:
+  ios-workflow:
+    name: DailyFlow iOS Build
+    max_build_duration: 60
+    environment:
+      groups:
+        - ios-vars
+      vars:
+        XCODE_PROJECT: "DailyFlow.xcodeproj"
+        XCODE_SCHEME: "DailyFlow"
+      xcode: latest
+    scripts:
+      - name: Install XcodeGen
+        script: brew install xcodegen
+
+      - name: Generate Xcode project
+        script: |
+          cd $CM_BUILD_DIR/DailyFlow
+          xcodegen generate
+
+      - name: Add GoogleService-Info.plist
+        script: |
+          echo "$GOOGLE_SERVICE_INFO_PLIST" > $CM_BUILD_DIR/DailyFlow/DailyFlow/GoogleService-Info.plist
+
+      - name: Build iOS app (no signing)
+        script: |
+          cd $CM_BUILD_DIR/DailyFlow
+          xcodebuild \
+            -project "$XCODE_PROJECT" \
+            -scheme "$XCODE_SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            -derivedDataPath build
+
+    artifacts:
+      - DailyFlow/build/**/*.app
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      email:
+        recipients:
+          - parvgarg.sn@gmail.com
+        notify:
+          success: true
+          failure: true
