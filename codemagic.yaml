@@ -2,6 +2,7 @@ workflows:
   ios-workflow:
     name: DailyFlow iOS Build
     max_build_duration: 60
+
     environment:
       groups:
         - ios-vars
@@ -9,9 +10,11 @@ workflows:
         XCODE_PROJECT: "DailyFlow.xcodeproj"
         XCODE_SCHEME: "DailyFlow"
       xcode: latest
+
     scripts:
       - name: Install XcodeGen
-        script: brew install xcodegen
+        script: |
+          brew install xcodegen || true
 
       - name: Generate Xcode project
         script: |
@@ -20,13 +23,25 @@ workflows:
 
       - name: Add GoogleService-Info.plist
         script: |
-          echo "$GOOGLE_SERVICE_INFO_PLIST" > $CM_BUILD_DIR/DailyFlow/DailyFlow/GoogleService-Info.plist
+          if [ -n "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+            echo "$GOOGLE_SERVICE_INFO_PLIST" > $CM_BUILD_DIR/DailyFlow/DailyFlow/GoogleService-Info.plist
+            echo "GoogleService-Info.plist created from Codemagic variable"
+          else
+            echo "Using GoogleService-Info.plist from repo if available"
+          fi
+          ls -la $CM_BUILD_DIR/DailyFlow/DailyFlow/GoogleService-Info.plist || true
 
       - name: Add Supabase.plist
         script: |
-          echo "$SUPABASE_PLIST" > $CM_BUILD_DIR/DailyFlow/DailyFlow/Supabase.plist
+          if [ -n "$SUPABASE_PLIST" ]; then
+            echo "$SUPABASE_PLIST" > $CM_BUILD_DIR/DailyFlow/DailyFlow/Supabase.plist
+            echo "Supabase.plist created from Codemagic variable"
+          else
+            echo "Using Supabase.plist from repo"
+          fi
+          ls -la $CM_BUILD_DIR/DailyFlow/DailyFlow/Supabase.plist || true
 
-      - name: Build iOS app (no signing)
+      - name: Build iOS app no signing
         script: |
           cd $CM_BUILD_DIR/DailyFlow
           xcodebuild \
