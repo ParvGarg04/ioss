@@ -22,6 +22,10 @@ workflows:
         script: |
           echo "$GOOGLE_SERVICE_INFO_PLIST" > $CM_BUILD_DIR/DailyFlow/DailyFlow/GoogleService-Info.plist
 
+      - name: Add Supabase.plist
+        script: |
+          echo "$SUPABASE_PLIST" > $CM_BUILD_DIR/DailyFlow/DailyFlow/Supabase.plist
+
       - name: Build iOS app (no signing)
         script: |
           cd $CM_BUILD_DIR/DailyFlow
