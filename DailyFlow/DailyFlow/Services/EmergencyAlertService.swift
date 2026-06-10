@@ -52,6 +52,11 @@ final class EmergencyAlertService: ObservableObject {
         if let mutedUntil = profile.emergencyMutedUntil, mutedUntil > Date() { return }
         if !profile.isNotificationsOn { return }
 
+        // If alert is targeted, only deliver to specified users
+        if let targets = alert.targetUserIds, !targets.isEmpty {
+            guard targets.contains(userId) else { return }
+        }
+
         let lastSeen = profile.lastSeenAlertId ?? lastSeenAlertId ?? ""
         guard alert.alertId != lastSeen else { return }
 

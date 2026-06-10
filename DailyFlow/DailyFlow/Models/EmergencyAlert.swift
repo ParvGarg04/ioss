@@ -3,12 +3,14 @@ import FirebaseFirestore
 
 struct EmergencyAlert: Identifiable, Codable {
     @DocumentID var id: String?
-    var alertId:    String
-    var title:      String
-    var message:    String
-    var createdAt:  Date
-    var createdBy:  String
-    var isActive:   Bool
+    var alertId:       String
+    var title:         String
+    var message:       String
+    var createdAt:     Date
+    var createdBy:     String
+    var isActive:      Bool
+    /// If set, only deliver to users whose IDs are in this list. Nil = broadcast to all.
+    var targetUserIds: [String]?
 
     init(
         id: String? = nil,
@@ -17,7 +19,8 @@ struct EmergencyAlert: Identifiable, Codable {
         message: String,
         createdAt: Date = Date(),
         createdBy: String,
-        isActive: Bool = true
+        isActive: Bool = true,
+        targetUserIds: [String]? = nil
     ) {
         self.id = id
         self.alertId = alertId
@@ -26,5 +29,6 @@ struct EmergencyAlert: Identifiable, Codable {
         self.createdAt = createdAt
         self.createdBy = createdBy
         self.isActive = isActive
+        self.targetUserIds = targetUserIds
     }
 }

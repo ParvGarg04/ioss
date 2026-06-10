@@ -189,21 +189,22 @@ struct SoftBackgroundDecoration: View {
         ZStack {
             AppTheme.background
             Circle()
-                .fill(AppTheme.lavender.opacity(0.18))
-                .frame(width: 280, height: 280)
-                .blur(radius: 60)
-                .offset(x: -120, y: -200)
+                .fill(AppTheme.lavender.opacity(0.15))
+                .frame(width: 320, height: 320)
+                .blur(radius: 70)
+                .offset(x: 160, y: -120)
             Circle()
-                .fill(AppTheme.peach.opacity(0.22))
-                .frame(width: 240, height: 240)
-                .blur(radius: 50)
-                .offset(x: 140, y: -80)
+                .fill(AppTheme.peach.opacity(0.18))
+                .frame(width: 260, height: 260)
+                .blur(radius: 55)
+                .offset(x: -80, y: 80)
             Circle()
-                .fill(AppTheme.accent.opacity(0.12))
+                .fill(AppTheme.accent.opacity(0.10))
                 .frame(width: 200, height: 200)
                 .blur(radius: 45)
-                .offset(x: 80, y: 300)
+                .offset(x: 100, y: 320)
         }
+        .clipped()
         .ignoresSafeArea()
     }
 }

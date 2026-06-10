@@ -266,17 +266,25 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
 }
 
 // ─── Emergency Alerts ────────────────────────────────────────
-export async function sendEmergencyAlert(title: string, message: string): Promise<string> {
+export async function sendEmergencyAlert(
+  title: string,
+  message: string,
+  targetUserIds?: string[]
+): Promise<string> {
   const uid = auth.currentUser?.uid ?? 'admin';
   const alertId = crypto.randomUUID();
-  const ref = await addDoc(collection(db, 'emergencyAlerts'), {
+  const payload: Record<string, any> = {
     alertId,
     title,
     message,
     createdAt: Timestamp.now(),
     createdBy: uid,
     isActive: true,
-  });
+  };
+  if (targetUserIds && targetUserIds.length > 0) {
+    payload.targetUserIds = targetUserIds;
+  }
+  const ref = await addDoc(collection(db, 'emergencyAlerts'), payload);
   return ref.id;
 }
 

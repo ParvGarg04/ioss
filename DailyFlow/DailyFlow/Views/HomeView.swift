@@ -12,6 +12,7 @@ struct HomeView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 22) {
                         heroCard
+                        rewardProgressCard
                         progressRow
                         statsRow
                         nextReminderCard
@@ -126,6 +127,111 @@ struct HomeView: View {
         .padding(.vertical, 12)
         .background(.white.opacity(0.2))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    // MARK: - Reward Progress Card
+    private var rewardProgressCard: some View {
+        let tiers: [(label: String, pts: Int, icon: String)] = [
+            ("Coffee", 100, "cup.and.saucer.fill"),
+            ("Lunch", 300, "fork.knife"),
+            ("Day Off", 750, "sun.max.fill"),
+            ("Bonus", 1500, "gift.fill"),
+        ]
+        let pts = viewModel.points
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("Reward Progress", systemImage: "star.circle.fill")
+                    .font(.headline)
+                    .foregroundStyle(AppTheme.textDark)
+                Spacer()
+                Text("\(pts) pts")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(AppTheme.accent.opacity(0.1))
+                    .clipShape(Capsule())
+            }
+
+            // Next reward highlight
+            if let next = tiers.first(where: { pts < $0.pts }) {
+                let prev = tiers.last(where: { pts >= $0.pts })?.pts ?? 0
+                let needed = next.pts - pts
+                let progress = Double(pts - prev) / Double(next.pts - prev)
+
+                VStack(spacing: 10) {
+                    HStack(spacing: 10) {
+                        ZStack {
+                            Circle()
+                                .fill(AppTheme.accent.opacity(0.12))
+                                .frame(width: 40, height: 40)
+                            Image(systemName: next.icon)
+                                .font(.system(size: 16))
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Next: \(next.label)")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(AppTheme.textDark)
+                            Text("\(needed) pts away")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.secondaryText)
+                        }
+                        Spacer()
+                        Text("\(next.pts) pts")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(AppTheme.secondaryText)
+                    }
+
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(AppTheme.softBorder.opacity(0.5))
+                                .frame(height: 10)
+                            Capsule()
+                                .fill(AppTheme.gradient)
+                                .frame(width: geo.size.width * progress, height: 10)
+                                .animation(.easeInOut(duration: 0.8), value: progress)
+                        }
+                    }
+                    .frame(height: 10)
+                }
+            } else {
+                HStack(spacing: 10) {
+                    Image(systemName: "trophy.fill")
+                        .font(.title2)
+                        .foregroundStyle(.yellow)
+                    Text("All rewards unlocked! 🎉")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(AppTheme.textDark)
+                }
+            }
+
+            // Tier chips
+            HStack(spacing: 8) {
+                ForEach(tiers, id: \.pts) { tier in
+                    let unlocked = pts >= tier.pts
+                    VStack(spacing: 4) {
+                        Image(systemName: tier.icon)
+                            .font(.system(size: 13))
+                            .foregroundStyle(unlocked ? AppTheme.accent : AppTheme.secondaryText.opacity(0.4))
+                        Text(tier.label)
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(unlocked ? AppTheme.textDark : AppTheme.secondaryText.opacity(0.4))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(unlocked ? AppTheme.accent.opacity(0.1) : AppTheme.softBorder.opacity(0.3))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(unlocked ? AppTheme.accent.opacity(0.3) : Color.clear, lineWidth: 1)
+                    )
+                }
+            }
+        }
+        .cardStyle()
     }
 
     // MARK: - Progress Ring Row

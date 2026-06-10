@@ -12,6 +12,9 @@ struct TasksView: View {
                 AppTheme.background.ignoresSafeArea()
 
                 VStack(spacing: 0) {
+                    // Summary strip
+                    taskSummaryStrip
+
                     segmentBar
 
                     ScrollView(showsIndicators: false) {
@@ -29,6 +32,7 @@ struct TasksView: View {
                                         selectedTask = task
                                         showCompletionSheet = true
                                     }
+                                    .transition(.opacity.combined(with: .move(edge: .top)))
                                 }
                             }
                         }
@@ -36,9 +40,9 @@ struct TasksView: View {
                         .padding(.vertical, 16)
                         .padding(.bottom, 20)
                     }
+                    .animation(.easeInOut(duration: 0.25), value: selectedSegment)
                 }
 
-                // Toast
                 if viewModel.showToast {
                     ToastBanner(
                         message: viewModel.successMessage ?? viewModel.errorMessage ?? "",
@@ -60,6 +64,57 @@ struct TasksView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Summary Strip
+    private var taskSummaryStrip: some View {
+        HStack(spacing: 0) {
+            summaryPill(
+                count: viewModel.pendingTasks.count,
+                label: "Pending",
+                color: AppTheme.accent,
+                icon: "clock.fill"
+            )
+            Divider().frame(height: 28).opacity(0.4)
+            summaryPill(
+                count: viewModel.completedTasks.count,
+                label: "Done",
+                color: AppTheme.success,
+                icon: "checkmark.circle.fill"
+            )
+            Divider().frame(height: 28).opacity(0.4)
+            summaryPill(
+                count: viewModel.missedTasks.count,
+                label: "Missed",
+                color: viewModel.missedTasks.isEmpty ? AppTheme.secondaryText : AppTheme.danger,
+                icon: "exclamationmark.circle.fill"
+            )
+        }
+        .padding(.vertical, 12)
+        .background(AppTheme.cardBackground)
+        .overlay(
+            Rectangle()
+                .fill(AppTheme.softBorder.opacity(0.6))
+                .frame(height: 1),
+            alignment: .bottom
+        )
+    }
+
+    private func summaryPill(count: Int, label: String, color: Color, icon: String) -> some View {
+        VStack(spacing: 3) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(color)
+                Text("\(count)")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(AppTheme.textDark)
+            }
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(AppTheme.secondaryText)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Segment Bar
@@ -99,18 +154,12 @@ struct TasksView: View {
         }
     }
 
-    private var emptyIcon: String {
-        ["tray.fill", "checkmark.circle", "exclamationmark.circle"][selectedSegment]
-    }
-    private var emptyTitle: String {
-        ["No pending tasks", "No completed tasks", "No missed tasks"][selectedSegment]
-    }
+    private var emptyIcon: String { ["tray.fill", "checkmark.circle", "exclamationmark.circle"][selectedSegment] }
+    private var emptyTitle: String { ["No pending tasks", "No completed tasks", "No missed tasks"][selectedSegment] }
     private var emptyMessage: String {
-        [
-            "You're all caught up! New tasks will appear here.",
-            "Complete tasks to see them here.",
-            "Great job staying on schedule!"
-        ][selectedSegment]
+        ["You're all caught up! New tasks will appear here.",
+         "Complete tasks to see them here.",
+         "Great job staying on schedule!"][selectedSegment]
     }
 }
 
@@ -125,9 +174,15 @@ struct ImprovedTaskCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Main row
+            // Priority accent line
+            if task.priority == .urgent && !isCompleted {
+                Rectangle()
+                    .fill(AppTheme.danger)
+                    .frame(height: 3)
+                    .clipShape(RoundedRectangle(cornerRadius: 2))
+            }
+
             HStack(spacing: 14) {
-                // Priority / type icon
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(isCompleted
@@ -153,17 +208,14 @@ struct ImprovedTaskCard: View {
                             .lineLimit(2)
                     }
 
-                    HStack(spacing: 10) {
+                    HStack(spacing: 8) {
                         if let due = task.dueTime {
                             Label(due.timeString, systemImage: "clock")
                                 .font(.caption)
-                                .foregroundStyle(
-                                    task.isOverdue && !isCompleted
-                                    ? AppTheme.danger : AppTheme.secondaryText
-                                )
+                                .foregroundStyle(task.isOverdue && !isCompleted ? AppTheme.danger : AppTheme.secondaryText)
                         }
                         if task.requiresProof {
-                            Label("Attachment", systemImage: "photo")
+                            Label("Photo", systemImage: "camera.fill")
                                 .font(.caption)
                                 .foregroundStyle(AppTheme.secondaryText)
                         }
@@ -177,11 +229,12 @@ struct ImprovedTaskCard: View {
 
                 Spacer()
 
-                PriorityBadge(priority: task.priority)
+                VStack(alignment: .trailing, spacing: 6) {
+                    PriorityBadge(priority: task.priority)
+                }
             }
             .padding(16)
 
-            // Submission status strip
             if let sub = submission {
                 Divider().padding(.horizontal, 16)
                 HStack(spacing: 8) {
@@ -198,16 +251,16 @@ struct ImprovedTaskCard: View {
                 .padding(.vertical, 10)
             }
 
-            // Action button if not completed
             if !isCompleted {
                 Divider().padding(.horizontal, 16)
                 Button(action: onTap) {
                     HStack(spacing: 8) {
                         Image(systemName: task.requiresProof ? "camera.fill" : "checkmark.circle.fill")
+                            .font(.system(size: 13, weight: .semibold))
                         Text(task.requiresProof ? "Upload Attachment" : "Mark Complete")
+                            .font(.subheadline.weight(.semibold))
                     }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(AppTheme.accent)
+                    .foregroundStyle(task.priority == .urgent ? AppTheme.danger : AppTheme.accent)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
                 }
@@ -217,10 +270,14 @@ struct ImprovedTaskCard: View {
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
-                .stroke(AppTheme.softBorder, lineWidth: 1)
+                .stroke(
+                    isCompleted ? AppTheme.success.opacity(0.3) :
+                    (task.priority == .urgent ? AppTheme.danger.opacity(0.3) : AppTheme.softBorder),
+                    lineWidth: 1
+                )
         )
         .shadow(color: AppTheme.cardShadow, radius: 8, y: 3)
-        .opacity(isCompleted ? 0.78 : 1)
+        .opacity(isCompleted ? 0.80 : 1)
     }
 }
 
@@ -264,7 +321,6 @@ struct TaskCompletionSheet: View {
                     }
                     .cardStyle()
 
-                    // Attachment section
                     if task.requiresProof {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack(spacing: 4) {
@@ -294,18 +350,12 @@ struct TaskCompletionSheet: View {
                             } else {
                                 HStack(spacing: 12) {
                                     Button { showCamera = true } label: {
-                                        HStack {
-                                            Image(systemName: "camera.fill")
-                                            Text("Camera")
-                                        }
+                                        HStack { Image(systemName: "camera.fill"); Text("Camera") }
                                     }
                                     .buttonStyle(SecondaryButtonStyle())
 
                                     Button { showImagePicker = true } label: {
-                                        HStack {
-                                            Image(systemName: "photo")
-                                            Text("Library")
-                                        }
+                                        HStack { Image(systemName: "photo"); Text("Library") }
                                     }
                                     .buttonStyle(SecondaryButtonStyle())
                                 }
@@ -318,7 +368,6 @@ struct TaskCompletionSheet: View {
                             }
                         }
                     } else {
-                        // Optional attachment for simple tasks
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Attachment (optional)")
                                 .font(.subheadline.weight(.semibold))
@@ -340,9 +389,7 @@ struct TaskCompletionSheet: View {
                                     }
                                 }
                             } else {
-                                Button {
-                                    showImagePicker = true
-                                } label: {
+                                Button { showImagePicker = true } label: {
                                     Label("Add Photo", systemImage: "camera")
                                         .font(.subheadline)
                                         .foregroundStyle(AppTheme.accent)
@@ -355,7 +402,6 @@ struct TaskCompletionSheet: View {
                         }
                     }
 
-                    // Note
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Note (optional)")
                             .font(.subheadline.weight(.medium))
@@ -365,7 +411,6 @@ struct TaskCompletionSheet: View {
                             .textFieldStyle(DailyFlowTextFieldStyle())
                     }
 
-                    // Error from ViewModel
                     if let err = viewModel.errorMessage {
                         Label(err, systemImage: "exclamationmark.triangle.fill")
                             .font(.caption)
@@ -378,13 +423,9 @@ struct TaskCompletionSheet: View {
                     Button {
                         Task { await handleSubmit() }
                     } label: {
-                        if viewModel.isSubmitting {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text(task.requiresProof ? "Submit Update" : "Mark Completed")
-                        }
+                        Text(task.requiresProof ? "Submit Update" : "Mark Completed")
                     }
-                    .buttonStyle(PrimaryButtonStyle())
+                    .buttonStyle(PrimaryButtonStyle(isLoading: viewModel.isSubmitting))
                     .disabled(viewModel.isSubmitting)
                 }
                 .padding(20)
@@ -409,13 +450,7 @@ struct TaskCompletionSheet: View {
             showAttachError = true
             return
         }
-        await viewModel.completeTask(
-            task,
-            image: selectedImage,
-            note: note.isBlank ? nil : note
-        )
-        if viewModel.successMessage != nil {
-            dismiss()
-        }
+        await viewModel.completeTask(task, image: selectedImage, note: note.isBlank ? nil : note)
+        if viewModel.successMessage != nil { dismiss() }
     }
 }
