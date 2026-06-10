@@ -3,8 +3,6 @@ workflows:
     name: DailyFlow iOS Build
     max_build_duration: 60
     environment:
-      groups:
-        - ios-vars
       vars:
         XCODE_PROJECT: "DailyFlow.xcodeproj"
         XCODE_SCHEME: "DailyFlow"
@@ -19,24 +17,20 @@ workflows:
           cd $CM_BUILD_DIR/DailyFlow
           xcodegen generate
 
-      - name: Add GoogleService-Info.plist
+      - name: Check GoogleService-Info.plist
         script: |
-          if [ -n "$GOOGLE_SERVICE_INFO_PLIST" ]; then
-            printf "%s" "$GOOGLE_SERVICE_INFO_PLIST" > $CM_BUILD_DIR/DailyFlow/DailyFlow/GoogleService-Info.plist
-            echo "GoogleService-Info.plist created"
+          if [ -f "$CM_BUILD_DIR/DailyFlow/DailyFlow/GoogleService-Info.plist" ]; then
+            echo "GoogleService-Info.plist found in repo"
+            plutil -lint $CM_BUILD_DIR/DailyFlow/DailyFlow/GoogleService-Info.plist
           else
-            echo "Using GoogleService-Info.plist from repo"
+            echo "ERROR: GoogleService-Info.plist not found!"
+            exit 1
           fi
-          ls -la $CM_BUILD_DIR/DailyFlow/DailyFlow/GoogleService-Info.plist || true
-          plutil -lint $CM_BUILD_DIR/DailyFlow/DailyFlow/GoogleService-Info.plist || true
 
       - name: Check Supabase.plist
         script: |
-          echo "Checking Supabase.plist from repo..."
           if [ -f "$CM_BUILD_DIR/DailyFlow/DailyFlow/Supabase.plist" ]; then
-            echo "Supabase.plist found"
-            ls -la $CM_BUILD_DIR/DailyFlow/DailyFlow/Supabase.plist
-            echo "Validating plist..."
+            echo "Supabase.plist found in repo"
             plutil -lint $CM_BUILD_DIR/DailyFlow/DailyFlow/Supabase.plist
           else
             echo "ERROR: Supabase.plist not found!"
